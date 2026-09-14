@@ -1,0 +1,29 @@
+.env
+chroma_db/
+data/documents/*
+!data/documents/.gitkeep
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.streamlit/secrets.toml
+models_cache/
+*.log
+.DS_Store
+data/*.json
+
+# --- added before the first commit ---
+# Generated evaluation reports: they carry timestamps and change on every run,
+# so committing them means noise in every diff. Regenerate with
+# `python scripts/eval_retrieval.py --html report.html`.
+report*.html
+
+# Leftovers from moving files around
+_to_delete/
+*.tar.gz
+.tmp*/
+
+# Virtualenv under any name, and the byte-compiled cache
+.venv*/
+env/
