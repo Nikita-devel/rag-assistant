@@ -126,6 +126,35 @@ Streaming shortens the second half of that wait, not the first. A public demo
 should use a hosted provider; the local configuration is what makes "your
 documents never leave the building" a true statement rather than a slogan.
 
+### Docker (home server)
+
+```bash
+cp .env.example .env          # set LLM_PROVIDER and, for a public URL, TUNNEL_TOKEN
+docker compose up -d --build
+docker compose logs -f rag
+```
+
+First boot takes about ten minutes — it downloads the corpus, the embedder and
+the reranker, then indexes 2 634 extracts. After that, boots are seconds: the
+models and the index live in named volumes, so rebuilding the image does not
+throw them away.
+
+Two things that are easy to get wrong:
+
+- **Ollama runs on the host, not in the container.** The compose file maps
+  `host.docker.internal` to the host gateway; without that entry every question
+  fails with "cannot reach Ollama".
+- **The port is published to `127.0.0.1` only.** The public entry point is the
+  Cloudflare tunnel, and binding `0.0.0.0` would expose the API to the whole LAN
+  while bypassing it.
+
+To publish it, create a tunnel in the Cloudflare Zero Trust dashboard, point its
+public hostname at `http://rag:8077`, put the token in `.env`, and:
+
+```bash
+docker compose --profile public up -d
+```
+
 ---
 
 ## Commands

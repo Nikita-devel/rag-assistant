@@ -1,0 +1,16 @@
+# Everything the image must not carry. .env above all: it holds a real API key
+# and it is supplied at run time, never baked in.
+.env
+.git
+.venv*/
+chroma_db/
+data/
+docs/
+_to_delete/
+report*.html
+*.tar.gz
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+README.md

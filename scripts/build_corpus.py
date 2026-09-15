@@ -18,13 +18,26 @@ import argparse
 import html
 import json
 import re
+import sys
 import unicodedata
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import settings  # noqa: E402
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-CACHE = BASE_DIR / "data" / "LEGITEXT000006072050.json"
-OUT_DIR = BASE_DIR / "data" / "documents"
+
+# The output directory comes from configuration, NOT from the repository layout.
+# Hardcoding BASE_DIR/"data"/"documents" here wrote the corpus to /app/data in
+# the container while ingestion read DOCUMENTS_PATH=/data — the two never met,
+# and the container crash-looped building a corpus nobody would ever read.
+OUT_DIR = settings.documents_path
+# Downloaded JSON dumps sit beside the corpus so a volume keeps them too; they
+# are 67 MB and re-downloading them on every container restart is rude.
+CACHE_DIR = OUT_DIR.parent
+CACHE = CACHE_DIR / "LEGITEXT000006072050.json"
 URL = ("https://raw.githubusercontent.com/SocialGouv/legi-data/"
        "master/data/LEGITEXT000006072050.json")
 
@@ -33,7 +46,7 @@ URL = ("https://raw.githubusercontent.com/SocialGouv/legi-data/"
 # the DILA/KALI database. Different schema from LEGI: articles carry HTML in
 # `content`, and the hierarchy title lives on the parent section.
 CCN_ID = "KALICONT000046993250"
-CCN_CACHE = BASE_DIR / "data" / f"{CCN_ID}.json"
+CCN_CACHE = CACHE_DIR / f"{CCN_ID}.json"
 CCN_URL = (f"https://raw.githubusercontent.com/SocialGouv/kali-data/"
            f"master/data/{CCN_ID}.json")
 # Only the base text. "Textes Attachés" / "Textes Salaires" are regional and

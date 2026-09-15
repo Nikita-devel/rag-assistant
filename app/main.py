@@ -140,11 +140,21 @@ async def index() -> FileResponse:
 
 @app.get("/health")
 async def health() -> dict:
-    """Cheap enough to hit every 30 s from a monitor."""
+    """Cheap enough to hit every 30 s from a monitor.
+
+    Returns 503 when the index is empty. An earlier version answered 200 with
+    zero chunks, so Docker's healthcheck reported a healthy container that could
+    not answer a single question — the worst kind of green light.
+    """
     retriever = get_retriever()
+    chunks = len(retriever._docs)
+    if chunks == 0:
+        raise HTTPException(
+            status_code=503,
+            detail="index is empty — run `python -m app.ingestion --reset`")
     return {
         "status": "ok",
-        "chunks": len(retriever._docs),
+        "chunks": chunks,
         "provider": settings.llm_provider,
         "model": describe(),
         "embedding_model": settings.embedding_model,

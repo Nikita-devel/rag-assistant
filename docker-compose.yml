@@ -1,0 +1,62 @@
+# Home-server deployment.
+#
+#   docker compose up -d --build
+#   docker compose logs -f rag
+#
+# First boot takes ~10 minutes: it downloads the corpus, the embedder and the
+# reranker, then indexes 2 634 extracts. Subsequent boots are seconds — both the
+# models and the index live in named volumes.
+
+services:
+  rag:
+    build: .
+    container_name: rag-assistant
+    restart: unless-stopped
+
+    # Published to localhost only. The public entry point is the Cloudflare
+    # tunnel below; binding 0.0.0.0 here would expose the API to the whole LAN
+    # and bypass every control the tunnel provides.
+    ports:
+      - "127.0.0.1:8077:8077"
+
+    env_file: .env
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8077
+      CHROMA_PATH: /data/chroma_db
+      DOCUMENTS_PATH: /data/documents
+      # Ollama runs on the HOST, not in this container. On Linux the alias below
+      # needs the extra_hosts entry; without it the container resolves nothing
+      # and every question fails with "cannot reach Ollama".
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - rag-data:/data        # corpus + Chroma index
+      - rag-models:/models    # HuggingFace cache (embedder + reranker, ~600 MB)
+
+    # A 7B model on CPU is memory-hungry and this box runs other things; without
+    # a ceiling one heavy question can push the host into swap.
+    deploy:
+      resources:
+        limits:
+          memory: 3g
+
+  # Public URL without opening a port on the router. Create the tunnel once in
+  # the Cloudflare dashboard, put its token in .env as TUNNEL_TOKEN, and point
+  # the public hostname at http://rag:8077.
+  #
+  # Start it with:  docker compose --profile public up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: rag-tunnel
+    restart: unless-stopped
+    profiles: ["public"]
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    depends_on:
+      - rag
+
+volumes:
+  rag-data:
+  rag-models:
