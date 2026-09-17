@@ -27,3 +27,9 @@ _to_delete/
 # Virtualenv under any name, and the byte-compiled cache
 .venv*/
 env/
+
+# Raw screen recordings: tens of megabytes of footage that git stores forever
+# and that nobody clones the repo for. The edited video belongs on YouTube or
+# LinkedIn, and the README links to it.
+docs/*.webm
+docs/*.mp4

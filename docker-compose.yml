@@ -57,6 +57,26 @@ services:
     depends_on:
       - rag
 
+  # Same thing without a domain: Cloudflare hands out a random
+  # *.trycloudflare.com URL, no account and no token needed.
+  #
+  #   docker compose --profile quick up -d
+  #   docker compose logs cloudflared-quick | grep trycloudflare.com
+  #
+  # The URL is NEW every time this container starts, which is why restart is
+  # off here — an auto-restart would silently move the demo to a different
+  # address while the old one is in your README. Fine for showing someone a
+  # link today; a named tunnel on your own domain is what a portfolio link
+  # needs.
+  cloudflared-quick:
+    image: cloudflare/cloudflared:latest
+    container_name: rag-tunnel-quick
+    restart: "no"
+    profiles: ["quick"]
+    command: tunnel --no-autoupdate --url http://rag:8077
+    depends_on:
+      - rag
+
 volumes:
   rag-data:
   rag-models:

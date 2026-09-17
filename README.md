@@ -5,10 +5,17 @@ A question-answering assistant over the French **Code du travail** and the
 company. Every answer cites the article it rests on, and the assistant refuses
 to answer when the corpus does not contain the answer.
 
-**Live demo:** <add the URL> · **Case study:** <add the URL>
+**Live demo:** https://assistant-droit-travail-405627799203.europe-west9.run.app
 
-<!-- Replace with a real screenshot: docs/screenshot-answer.png -->
-<!-- ![The assistant answering a question with cited sources](docs/screenshot-answer.png) -->
+> The demo scales to zero between visits, so the first question after a quiet
+> period waits for a cold start — around a minute. Every question after that is
+> answered in three to four seconds.
+
+![A cited answer: two and a half days of paid leave per month, citing Article 83 of the collective agreement and Article L3141-3 of the Labour Code](docs/screenshot-answer.png)
+
+Asked something the corpus does not cover, it says so instead of improvising:
+
+![The assistant declining to answer a question about a tarte tatin recipe](docs/screenshot-refusal.png)
 
 ---
 
@@ -111,11 +118,18 @@ that are dead weight on a CPU host — that alone is the difference between a
 ### Choosing a language model
 
 ```bash
-# Local — no key, no quota, nothing leaves the machine
+# Local — no key, no quota, nothing leaves the machine. ~20-30 s per answer.
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=qwen2.5:7b-instruct
 
-# Hosted — faster, needs a key and an activated tier
+# Hosted, free tier, no credit card. Seconds per answer — use this for a
+# public demo. Speaks the OpenAI protocol, so the same setting reaches
+# Together, OpenRouter or a self-hosted vLLM via GROQ_BASE_URL.
+LLM_PROVIDER=groq
+GROQ_API_KEY=...
+
+# Hosted, French. The best story for a French client, once the free tier is
+# activated — until then every call returns 429.
 LLM_PROVIDER=mistral
 MISTRAL_API_KEY=...
 ```
@@ -154,6 +168,20 @@ public hostname at `http://rag:8077`, put the token in `.env`, and:
 ```bash
 docker compose --profile public up -d
 ```
+
+### Cloud Run (the public demo)
+
+`deploy/cloudrun/` holds the image and the commands behind the link at the top
+of this page. It differs from the home-server setup in one decision that is
+worth stating: **the corpus, the index and both models are baked into the
+image** rather than built at boot. Cloud Run scales to zero and keeps no disk,
+so a container built at boot would make the first visitor wait ten minutes —
+and on a link sent to a prospect, ten minutes is indistinguishable from broken.
+
+`deploy/cloudrun/DEPLOY.md` is the full walkthrough, including why the service
+runs `uvicorn --proxy-headers`: behind Google's front end the client address is
+the proxy's, and without it slowapi's per-IP rate limit degrades into one
+shared bucket for every visitor at once.
 
 ---
 
