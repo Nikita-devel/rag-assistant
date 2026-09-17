@@ -69,7 +69,19 @@ REFUSAL = {
            "rather say so than risk an inaccurate answer."),
 }
 
-CITATION_RE = re.compile(r"\[(\d+)\]")
+# Models do not agree on what a citation looks like. gpt-oss emits full-width
+# CJK brackets 【1】, some models use (1) or [1], and a stray space creeps in.
+# Matching only ASCII "[1]" silently switched the whole citation mechanism off:
+# the answer looked cited, and the UI reported "0 sources cited".
+CITATION_RE = re.compile(r"[\[【〔]\s*(\d+)\s*[\]】〕]")
+
+# Everything is normalised to [n] before it reaches the UI, so downstream code
+# and the page only ever deal with one shape.
+_CITATION_ANY = re.compile(r"[\[【〔]\s*(\d+)\s*[\]】〕]")
+
+
+def normalize_citations(text: str) -> str:
+    return _CITATION_ANY.sub(lambda m: f"[{m.group(1)}]", text)
 
 
 @dataclass
@@ -171,6 +183,7 @@ def _strip_dangling_citations(text: str) -> str:
     Markers inside the prose are the whole point of the product and are left
     exactly where the model put them.
     """
+    text = normalize_citations(text)
     text = DANGLING_CITATION_RE.sub("", text)
     text = LEADING_CITATION_RE.sub("", text.lstrip())
     return text.strip()

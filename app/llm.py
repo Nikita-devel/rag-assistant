@@ -7,7 +7,12 @@ shown to prospects on a schedule you do not control, that is unacceptable.
 
 Providers:
 
-  mistral — hosted, fast, costs money (or needs an activated free tier).
+  groq    — hosted, free tier with no card, and fast enough that a public
+            visitor gets an answer in seconds instead of half a minute. Speaks
+            the OpenAI protocol, so the same code reaches Together, OpenRouter
+            or a self-hosted vLLM by changing one URL.
+  mistral — hosted, French. Best story for a French SME, but the free tier has
+            to be activated before the key does anything but 429.
   ollama  — a model running on your own machine. No key, no quota, no rate
             limit, and nothing leaves the network. For an assistant sold to
             French industrial SMEs on exactly that promise, this is not the
@@ -100,7 +105,44 @@ def _ollama(system: str, user: str) -> str:
     return response.json()["message"]["content"].strip()
 
 
-PROVIDERS = {"mistral": _mistral, "ollama": _ollama}
+def _groq(system: str, user: str) -> str:
+    """OpenAI-compatible chat completions. Used for Groq, but the protocol is
+    the same for Together, OpenRouter, Fireworks or a self-hosted vLLM — point
+    GROQ_BASE_URL somewhere else and nothing here changes."""
+    import requests
+
+    if not settings.groq_api_key:
+        raise LLMError("GROQ_API_KEY is not set — check your .env")
+
+    try:
+        response = requests.post(
+            f"{settings.groq_base_url.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+            json={
+                "model": settings.groq_model,
+                "messages": [{"role": "system", "content": system},
+                             {"role": "user", "content": user}],
+                "temperature": TEMPERATURE,
+                "max_tokens": MAX_TOKENS,
+            },
+            timeout=90,
+        )
+    except requests.exceptions.RequestException as exc:
+        raise LLMUnavailable(f"cannot reach {settings.groq_base_url}: {exc}") from exc
+
+    if response.status_code == 401:
+        raise LLMError("GROQ_API_KEY rejected — check the key in your .env")
+    if response.status_code == 429:
+        # Transient: _is_transient sees the 429 in the message and backs off.
+        raise LLMError(f"429 rate limited by {settings.groq_base_url}")
+    if response.status_code != 200:
+        raise LLMError(f"{settings.groq_base_url} returned "
+                       f"{response.status_code}: {response.text[:200]}")
+
+    return response.json()["choices"][0]["message"]["content"].strip()
+
+
+PROVIDERS = {"mistral": _mistral, "ollama": _ollama, "groq": _groq}
 
 
 # --------------------------------------------------------------------------- #
@@ -213,4 +255,6 @@ def describe() -> str:
     """Short label for logs and the UI footer."""
     if settings.llm_provider == "ollama":
         return f"ollama/{settings.ollama_model}"
+    if settings.llm_provider == "groq":
+        return f"groq/{settings.groq_model}"
     return f"mistral/{settings.llm_model}"

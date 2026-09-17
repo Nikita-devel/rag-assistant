@@ -217,13 +217,27 @@ const escapeHtml = (s) => s.replace(/[&<>"]/g, c =>
 // Turn [1] into a chip that reveals and highlights its source. This is the
 // gesture the whole product is built around: the reader checks a claim instead
 // of trusting it.
+//
+// Models do not agree on what a citation looks like: gpt-oss emits full-width
+// CJK brackets 【1】, others 〔1〕 or [1], sometimes with a space inside. The
+// server normalises the FINAL answer, but streamed tokens arrive raw, so the
+// same three bracket pairs are accepted here too. Matching ASCII only meant the
+// answer rendered "【1】" as literal text and the citation mechanism — the whole
+// point of the product — silently did nothing.
+const CITE_RE = /[ \t]*[\[【〔]\s*(\d+)\s*[\]】〕]/g;
+
 function renderAnswer(text) {
   // The space before a marker becomes non-breaking: the model writes
   // "civils [1]." and a normal space lets the line break there, which drops the
   // chip — and the full stop with it — onto a line of its own on a phone.
-  el("answer").innerHTML = escapeHtml(text).replace(
-    /[ \t]*\[(\d+)\]/g,
+  let html = escapeHtml(text).replace(
+    CITE_RE,
     (_, n) => `&nbsp;<a class="cite" data-n="${n}" href="#src-${n}">${n}</a>`);
+  // Models emphasise the answer's key figure with **markdown**, which renders
+  // as literal asterisks in an HTML page. Escaping happened above, so this can
+  // only ever produce <strong> around already-safe text.
+  html = html.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  el("answer").innerHTML = html;
   for (const chip of el("answer").querySelectorAll(".cite")) {
     chip.onclick = (e) => {
       e.preventDefault();

@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     )
 
     # --- LLM ---
-    # "mistral" (hosted, needs a key and quota) or "ollama" (local, needs
-    # `ollama serve` running). See app/llm.py.
+    # "ollama" (local), "groq" (hosted, free tier, no card) or "mistral"
+    # (hosted, French). See app/llm.py.
     llm_provider: str = "ollama"
 
     mistral_api_key: str = ""
@@ -36,6 +36,17 @@ class Settings(BaseSettings):
     # Keep the model resident between questions, or every call pays the load
     # cost again.
     ollama_keep_alive: str = "30m"
+
+    # Groq speaks the OpenAI chat-completions protocol, so the same code path
+    # serves any OpenAI-compatible endpoint — Together, OpenRouter, a local
+    # vLLM — by changing the base URL alone.
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    # Groq retires models on a few months' notice — llama-3.3-70b-versatile,
+    # the first choice here, was withdrawn in August 2026. Check the live
+    # catalogue with:
+    #   curl -s https://api.groq.com/openai/v1/models -H "Authorization: Bearer $KEY"
+    groq_model: str = "openai/gpt-oss-120b"
 
     # --- Embeddings ---
     # NOTE: must be multilingual. The corpus is French, the demo answers FR+EN.
