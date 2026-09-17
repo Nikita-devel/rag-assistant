@@ -6,6 +6,7 @@ company. Every answer cites the article it rests on, and the assistant refuses
 to answer when the corpus does not contain the answer.
 
 **Live demo:** https://assistant-droit-travail-405627799203.europe-west9.run.app
+**Case study:** [docs/case-study.en.md](docs/case-study.en.md) · [version française](docs/case-study.fr.md)
 
 > The demo scales to zero between visits, so the first question after a quiet
 > period waits for a cold start — around a minute. Every question after that is
