@@ -1,5 +1,7 @@
 # Assistant droit du travail — RAG over French labour law
 
+[![CI](https://github.com/Nikita-devel/rag-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Nikita-devel/rag-assistant/actions/workflows/ci.yml) [![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://assistant-droit-travail-405627799203.europe-west9.run.app)
+
 A question-answering assistant over the French **Code du travail** and the
 **metallurgy collective agreement (IDCC 3248)**, built for a small industrial
 company. Every answer cites the article it rests on, and the assistant refuses
